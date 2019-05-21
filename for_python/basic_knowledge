@@ -1,0 +1,136 @@
+flask实践练习
+============
+1.一个Flask类的实例是一个WSGI应用
+2.__name__与__main__的区别   //作为应用还是作为导入的模块
+3.Flask类中的route()修饰器用来绑定url到函数
+4.运行前的环境变量的设定:
+   linux: export FLASK_APP=flask_practice.py
+   windows dos: set FLASk_APP=flask_practice.py
+   windows powershell: $env:FLASK_APP = "flask_practice.py"
+5.应用名不要为flask.py否则运行时会产生冲突   //会导致使用自己来运行自己的情况
+6.运行: flask run   //此时是只可本地访问   //也可使用python3 -m flask run来运行
+7.允许所有ip地址访问,加上--host=0.0.0.0参数: flask run --host=0.0.0.0
+8.以开发者模式运行flask,仅需在运行前设置环境变量: export FLASK_ENV=development  //这是Linux平台下的，windows dos和windows powershell参照上面的FLASK_APP环境变量设置
+   开发者模式好处:
+      1.激活了reloader  //可以自动检测文件的改变并reload
+      2.激活了debugger
+      3.在flask应用上启用debug模式  //debug模式可以看到更多的输出信息
+      *.可以通过设置环境变量来单独控制是否在flask应用上启用debug模式:
+          export FLASK_DEBUG=0/1
+      *.不要在线上环境启用debug模式，因为该模式允许执行任意代码，存在安全问题
+9.修饰器route()中定义的url字符串中可以使用变量，方法是将变量放到<>中:
+   1. @app.route('/user/<username>')
+   2. @app.route('/post/<int:post_id>')
+   3. @route.route('/path/<path:subpath>')
+   *.上面三种形式中，第一种是最简单的，第二三种是带converter的,说白了就是限制变量这部分的类型，如果你进来的字符串的指定部分类型不正确则不会被正确处理,这里的converter种类有以下5种:
+      string: 默认的coverter,接受任何不带slash的文本  //这里的默认指的是第一种情况的完整形式应该写成'/usr/<string:username>',只是省略了默认值
+      int: 接受正整数
+      float:接受正的浮点数
+      path:和string相同，除了它还接受slash外
+      uuid:接受uuid字符串
+      *.使用的时候注意:1.要在函数中引用该变量要将该变量作为函数的参数;2.注意使用变量时的格式化参数，如字符串用%s, 整型用%d等
+*10.@app.route()中的url字符串，如果以/结尾则说明前面的字符串是个文件夹，如果没有/结尾则说明这部分是文件:
+    @app.route('/projects/')   //projects是文件夹
+    @app.route('/about')       //about是文件
+    *.有点小疑问，如果有两个同名串，唯一区别是最后有无/,此时无论使用有无/的url访问都会跳到有/的那个函数，而没有/的那个函数永远不会被执行，为什么
+11. url_for()函数有两个参数，一个是"函数名",一个是"任意多个键值对",我们都知道
+  @app.route('url')
+  def fun_name
+上面这个是用来将'url'绑定到函数'fun_name', 而url_for()函数的作用和上面的这个绑定正好相反，是用来通过'fun_name'来反向推导出与之绑定的'url';而第二个参数"任意多个键值对"是对应的'url'串中定义的变量与该变量对应的值(原url中的变量通常是文件夹名或是文件名)，这里有需要注意的地方就是如果url_for()函数中给出的"键值对"有非相应'url'中定义的，则将这些在'url'中不存在的键值对作为'url'的参数追加到?后:
+    a.url中没有变量的情况:
+        @app.route('/abc')
+	def fun_name()
+	
+	url_for('fun_name')  -> '/abc'
+    b.url中有变量且url_for()中精确指定了该变量的键值对
+        @app.route('/abc/<username>')
+	def fun_name(username)
+	
+	url_for('fun_name', username='YQ') -> '/abc/yq'
+    c.url中有变量且url_for()中指定了除url中给定变量以外的其它变量
+        @app.route('/abc/<username>')
+	def fun_name(username)
+
+	url_for('fun_name', username='YQ', country='china') -> '/abc/YQ?country%20china'
+    *.需要注意的还是'url'中的变量，需要想要在函数中引用，需要将变量名作为函数的参数
+    *.对于第三种情况我的理解是:首先一个request过来后，我们得到了一个url,如'/abc/yq',此时会有一个变量赋值即username='yq',然后把这个username作为参数传到fun_name中，此时在fun_name中就可以引用username的值了，而url_for中的要求是'fun_name'和相应的变量必须都存在，这种情况下url_for就可以正常工作了，而多余的键值对该函数会特殊处理,即作为url的参数，而不是url_for()函数会检查所有的变量名，也就是在保证'fun_name'正确的情况下，变量情况参照相应的url中的变量可多不可少
+12.可以使用修饰器route()中的method参数来限定处理哪种请求方法的'url',即之前是只要'url'正确就会执行相应绑定的函数，现在不同了，即使你'url'正确，还要看一看你请求的方法是否在我要求的几种方法范围内，如果请求用的方法在我指定的方法范围内则执行相应的函数，否则不执行相应函数，也就是说在执行相应函数前又多了一层判断:
+    @app.route('/login', methods=['GET', 'POST'])
+    def login()   //只有使用'GET'或'POST'方法访问/login这个url,才会执行login()函数，使用其它方法，如'PUT','OPTIONS'等方法请求/login是不会执行login()函数的
+    *.特殊情况: 如果'GET'方法被允许，则HEAD默认也是被允许的(后面说的是OPTIONS方法也会为你自动实现，是否说明只要'GET'被允许，则上面那三个都是被允许的?)
+13.引用CSS，js等静态文件时，通常的做法是在模块同级目录建一个名为'static'的文件夹，然后将相应的静态文件放到'static'文件夹中，以后可以通过'static/file_name'来引用这些静态文件了，如果想使用url_for()函数来反向拿到某个静态文件的相对url,可以写作:
+     url_for('static', filename='file_name')
+14.flask提供了Jinja2模板引擎,我们可以使用render_template()函数来渲染模板，该函数使用方法也很简单，提供两个参数，一个是模板名称'templat_name'一个是模板中引用的变量'**kwargs'
+  *.这个模板文件夹templates和上面讲的静态文件夹static相似，也是在和应用同级建一个templates文件夹，然后将模板都放在这里面，在render_template()函数中直接使用模板的文件名，应用会自动从templates这个文件夹中去找
+  *.查一下package和module的区别  //  __init__.py
+  Jinja2模板的写法:http://jinja.pocoo.org/docs/templates
+  a.模板中有权限访问request,session和g对象，也可以使用get_flashed_messages()函数
+  b.在继承中模板作用很大，比如有一些固定的内容，如页眉页脚等可作为其它模板的父模板
+    关于模板继承的内容:http://flask.pocoo.org/docs/1.0/patterns/templateinheritance/#template-inheritance
+  c.Markup在模板中的作用?  //http://jinja.pocoo.org/docs/api/#jinja2.Markup
+  d.你可以按你自己的需要在g对象中存储内容，具体可参看sqlite3的使用一节来详细了解g对象的应用  //http://flask.pocoo.org/docs/1.0/patterns/sqlite3/#sqlite3
+15.可以使用request对象来访问由客户端发来的请求信息:
+  a.Context Locals一节没看，很重要!
+  b.Flask类的test_request_context()可以模拟请求，做测试时有用 //有参数时，没参数时，本章都有例子，到时候用到了再来看吧
+  c.详细的request对象的讲解是在API一章，本章只讲最常见的应用  //API:http://flask.pocoo.org/docs/1.0/api/#flask.Request
+  d.最常用的就是request对象的方法属性method，表单属性form, url参数(?key=value):
+        request.method == 'POST'
+	request.form['username'] == 'YQ'
+	request.args.get('key', '')
+	*.简单用法基本上就是对一些内容的检索
+16.文件上传:基本的用法是使用form表单进行上传，需要注意的是form起始标签中要有enctype="multipart/form-data"属性，否则文件是不会上传的; 文件上传后会存在内存或是文件系统上的一个临时位置，我们可以使用request对象的files属性来访问该文件;上传的文件都被存放在字典中，而相应的值就像一个file对象，所以我们可以使用save()方法来将该文件保存到服务器上:
+    f = requests.files['the_file']  //file字典中的键名对应的是input中的name属性
+    f.save('/path/of/file')  //保存时的文件名可以通过f.filename去获取
+    *.这里明确提出了因为f.filename得到的字符串可以被伪造为一些特殊名称的字符串，所以如果要向服务器上存的话最好使用secure_filename这个方法，其实这个方法就是通过经验对一些特殊构造的文件名进行去危险化，所以可以得知，f.filename和secure_filename(f.filename)很多时候并不相等  //具体可见secure_filename的介绍:http://werkzeug.pocoo.org/docs/utils/#werkzeug.utils.secure_filename    //from werkzeug.utils import secure_filename
+    *.更多关于文件上传的内容见: http://flask.pocoo.org/docs/1.0/patterns/fileuploads/#uploading-files
+17.cookies说白了就是一个键值对，它的用法一般是在服务端的响应对象make_response的set_cookie()方法进行cookie的添加，然后当响应返回到浏览器后cookies会保存在本地(这个cookies应该是和域相对应的，这个还没细看)，然后再次请求同一个域名的地址时会将浏览器中保存的该域下的所有cookie都传到服务端，然后服务端可以使用request对象的cookies.get()方法对cookies进行一个读取    //常见用法是通过cookie来判断用户是否登录等
+    from flask import request, make_response
+
+    resp = make_response(render_template(...))
+    resp.set_cookie('key', 'value')
+
+    username = request.cookies.get('key')
+18.redirect()函数可以进行url重定向，它里面的地址和修饰器route()一样，是相对地址就可以，通常的用法是配合url_for使用:
+    return redirect(url_for('login'))
+19.如果想中止请求的执行，可以使用abort(错误码)函数，系统里通常会预置常见的错误码和相对应的信息，这个错误码我们可以通过inspect中的network中看到，而相应的错误信息直接会显示在页面。我们也可以使用修饰器errorhandler()自己自定义错误码和相应的响应信息:
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template('page_not_found.html'),404  //此时再调用abort(404)，显示的内容就是我们自己自定义的了，注意自定义错误码和错误信息的完整写法
+    *.Error handlers:  http://flask.pocoo.org/docs/1.0/errorhandling/#error-handlers
+20.上面也讲了修饰器route()会将url绑定到某个函数，而函数中的return语句的参数会作为返回内容，其实返回给客户端的是一个response对象，而有些时候我们在函数中写的时候只是"return 字符串"，其实还有一部分工作是由修饰器route()做了就是封装response对象的过程，如果返回值仅仅是一个字符串的话，它的response对象中应该包括:a.响应体(字符串内容); b.状态码200 OK;c.文件类型(mimetype)text/html.
+   Flask将return值转换为response对象的大致逻辑是:
+     1.如果view函数中return的就是一个正确的response对象，则直接就将这个对象返回到客户端;
+     2.如果view函数中return值是一个字符串，则要创建一个带有数据及默认参数的response对象(参考第20最后一句话)
+     3.如果返回值是一个tuple,则tuple中的元素可以提供额外的信息，但则这个tuple的形式必须是(response, status, headers)或(response, headers)，此时status参数将会重写response中的状态码，headers类型可以是字典或列表，它是独立于response对象中已有的headers提供的额外headers值
+     4.如果上面三个都不工作，则Flask会认为返回值是一个有效的WSGI应用，并且将其转化为一个response对象  //这条不明白
+21.如果想要更好的把握response信息，可以使用make_response()函数，该函数可以对响应的所有内容进行自定义添加和修改，借自定义错误码及相应的响应信息的两种方式对比一下吧:
+  @app.errorhandler(404)
+  def not_found(error):
+    return render_template('error.html'), 404
+
+  @app.errorhandler(404)
+  def not_found(erro):
+    resp = make_response(render_template('error.html'), 404)
+    resp.headers['X-Something'] = 'A value'
+    return resp
+  *.感觉第一种形式还需要二次封成成response对象，而第二种形式直接就将return值返回给客户端
+  *.Flask类中的修饰器route()中应该有对所修饰函数中return值的检测与封装(如果检测值为response对象则直接返回，如果不是，则按规则进行二次封装为response对象并返回)
+22.除了上面说的request对象外，还有另外一个对象session,它的作用是在多个请求中存储特定用户的信息，也就是说可以利用session来知道不同的请求是否属于同一个用户.session其实就是加了密的cookies,最实际的情况就是用户可以看到cookies的内容但是修改不了，除非知道签名(signing)密钥，所以要使用session,第一步就是要设置一个密钥:
+   app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
+   常用操作:
+     'username' in session:
+     session['username'] = request.form['username']
+     session.pop('username', None)
+   *.如果没有使用模板引擎的话要在return语句中使用escape进行转义
+   *.创建随机密钥: python3 -c 'import os; print(os.urandom(16))'
+23. Message Flashing
+24.Logger
+25.Hooking in WSGI Middlewares
+26.Using Flask Extensions
+27.Deploying to a Web Server
+========================
+create a simple API  -- Python版
+//https://programminghistorian.org/en/lessons/creating-apis-with-python-and-flask
+1.利用的是flask包中的jsonify,它可以将list转化为json格式，我们都知道json格式是较常用的API返回格式，所以我们只需将返回的数据以list的形式进行组织，然后返回jsonify(list)即可在客户端得到json格式的数据
+//这一块领悟到一些api测试的检查点: 1.未提供参数时的情况是否考虑，多数情况是友好性问题，不要说返回一个报错，最好是返回一句友好提示啥的; 2.上传文件时是否对保存的文件名进行了安全处理;保存数据或者读取数据时是否有对数据进行预处理，现在能想到的就是文件名或数据有/的形式，导致可以访问系统文件，这应该是隐式url注入中的东西吧，具体要细看;3.请求方法是否有不当，如只允许GET，但我使用DELETE也被接受，结果数据被删除
+
