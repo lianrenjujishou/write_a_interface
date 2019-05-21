@@ -1,0 +1,14 @@
+kotlin里创建接口我使用的是ktor库，这个库不管好赖是由Jetbrains官方出品的。
+接口创建参考链接: https://ktor.io/quickstart/guides/api.html
+构建工具: gradle
+------------------
+说一下重点吧:
+0.啰嗦一下jdk的安装：文件下载并解压后，在~/.profile文件中追加以下两行:
+                      export JAVA_HOME=jdk文件夹
+                      export PATH=$PATH:jdk文件夹/bin
+                      然后执行source ~/.profile使之立刻生效
+1.gradle安装好后，kotlin的编译工具就都安装好了，但是不知gradle是怎么个逻辑，使用kotlinc即不能运行，也找不到同名文件，如果想要自己在命令行下使用kotlinc进行编译最好自己单独下载
+2.最重要的就是gradle现在还玩不转，我使用的方法是先利用gradle init使用第8个选项(kotlin-application)进行初始化,然后再向build.gradle中的dependencies中添加包，然后Kt文件中就可以使用import将相关的内容导入了
+3.对于Kotlin应用来说，application插件和mainClassName是必不可少的，而这个mainClassName的值一般是"包名.主类所在文件名+Kt"
+4.还会遇到的问题是命令行下如果没有自动导入而且自己对每个包中都有啥又不熟的情况，这种情况下我感觉最好的解决办法就是IDEA与vim二者配合着来，啥块不确定了就利用IDEA的自动导入功能，看看导入的是啥，然后手动在vim中敲出来
+5.还是那句话即使不精通也要至少将基础库所有内容都看两遍，这样至少用到的时候不会手足无措
