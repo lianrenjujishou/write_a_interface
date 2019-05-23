@@ -1,4 +1,5 @@
 go环境的搭建:
+前提: 所有的环境变量都放到~/.profile或/etc/.profile中就好，写好使用source命令执行一下，相应的环境变量就会立即生效了
 第一步：下载编译好的golang程序包，解压到/usr/local目录下，并且将/usr/local/go/bin路径加入PATH:
     到这里找下载地址:https://golang.org/dl/ 然后该页上面还有一个installation instructions超链接，点进去看一下有具体的安装步骤以及GOPATH相关
     export PATH=$PATH:/usr/local/go/bin
