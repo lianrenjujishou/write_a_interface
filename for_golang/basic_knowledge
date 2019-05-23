@@ -1,0 +1,20 @@
+go环境的搭建:
+第一步：下载编译好的golang程序包，解压到/usr/local目录下，并且将/usr/local/go/bin路径加入PATH:
+    到这里找下载地址:https://golang.org/dl/ 然后该页上面还有一个installation instructions超链接，点进去看一下有具体的安装步骤以及GOPATH相关
+    export PATH=$PATH:/usr/local/go/bin
+第二步: 设置环境变量GOPATH,这个很重要，通常使用go get下载golang插件的时候都是下载到这个路径下的,该路径通常有两个文件夹，一个是bin, 一个是src
+    export GOPATH=/$HOME/go
+第三步: 将$GOPATH/go/bin加入PATH,以便后续使用go get 得到的二进制程序可以直接使用:   export PATH=$PATH:$GOPATH/go/bin
+第三步: 安装golang调试工具dlv:
+    go get -u github.com/go-delve/delve/cmd/dlv 
+第四步: 安装beego插件:
+    go get github.com/astaxie/beego 
+第五步: 安装bee插件
+    go get github.com/beego/bee
+*注意: bee dlv不能用报错，可以直接使用dlv debug来运行main.go
+**.其实环境搭建真的没啥好说的，上面写的有点屎，其实就是去官网看安装相关内容就好了，不要去第三方博客搜，好多是理解有误或是过时的东西
+==========================
+使用golang写接口参考了两篇文件，第一篇是直接使用golang自带的net/http：
+    https://thenewstack.io/make-a-restful-json-api-go/
+第二个是使用使用golang写的beego框架:
+    https://beego.me/blog/beego_api
